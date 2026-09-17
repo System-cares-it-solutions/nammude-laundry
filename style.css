@@ -252,6 +252,19 @@ button {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.logo a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 .logo-img {
@@ -262,6 +275,8 @@ button {
   vertical-align: middle;
   filter: none !important;
   transition: var(--transition);
+  background: transparent;
+  display: block;
 }
 
 .nav {
@@ -5868,8 +5883,8 @@ html {
   max-width: 620px;
   height: 75vh;
   max-height: 620px;
-  background: url('images/Independence Day India Post.svg') no-repeat center center / contain;
-  opacity: 0.12;
+  background: url('images/nammudemap.jpg') no-repeat center center / contain;
+  opacity: 1;
   z-index: 1;
   pointer-events: none;
 }

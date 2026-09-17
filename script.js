@@ -323,9 +323,9 @@
   // =============================================
   // 8. EMAILJS CONTACT FORMS INTEGRATION
   // =============================================
-  const EMAILJS_PUBLIC_KEY = 'QfCGNTbEDj4Lk8mx5';
-  const EMAILJS_SERVICE_ID = 'service_74r81st';
-  const EMAILJS_TEMPLATE_ID = 'template_xq68dlf';
+  const EMAILJS_PUBLIC_KEY = 'hkbYJss68FSRoHoqB';
+  const EMAILJS_SERVICE_ID = 'service_cg65wqr';
+  const EMAILJS_TEMPLATE_ID = 'template_i2mo5io';
 
   function initEmailJSForms() {
     if (typeof emailjs !== 'undefined') {
@@ -342,21 +342,62 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Sending...';
 
+      // Find or create in-form message container for direct feedback
+      let statusDiv = formElement.querySelector('.form-status-msg');
+      if (!statusDiv) {
+        statusDiv = document.createElement('div');
+        statusDiv.className = 'form-status-msg';
+        statusDiv.style.marginTop = '16px';
+        statusDiv.style.padding = '12px 18px';
+        statusDiv.style.borderRadius = '8px';
+        statusDiv.style.fontSize = '14px';
+        statusDiv.style.fontWeight = '500';
+        statusDiv.style.textAlign = 'center';
+        statusDiv.style.transition = 'all 0.3s ease';
+        submitBtn.parentNode.insertBefore(statusDiv, submitBtn.nextSibling);
+      }
+      statusDiv.style.display = 'none';
+
       if (typeof emailjs === 'undefined') {
-        showToast('Email service is loading. Please try again or WhatsApp us directly.', 'error');
+        const errorText = 'Email service is currently loading. Please try again in a few seconds or contact us directly.';
+        showToast(errorText, 'error');
+        statusDiv.textContent = errorText;
+        statusDiv.style.backgroundColor = '#fde8e8';
+        statusDiv.style.color = '#c62222';
+        statusDiv.style.border = '1px solid #f8b4b4';
+        statusDiv.style.display = 'block';
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
         return;
       }
 
-      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+      try {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+      } catch (err) {
+        console.warn('EmailJS re-init check:', err);
+      }
+
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY)
         .then(() => {
-          showToast(successMsg || 'Thank you! Your message has been sent successfully.', 'success');
+          const successText = successMsg || 'Thank you! Your message has been sent successfully.';
+          showToast(successText, 'success');
+          statusDiv.textContent = successText;
+          statusDiv.style.backgroundColor = '#def7ec';
+          statusDiv.style.color = '#03543f';
+          statusDiv.style.border = '1px solid #bcf0da';
+          statusDiv.style.display = 'block';
           formElement.reset();
         })
         .catch((error) => {
           console.error('EmailJS Error:', error);
-          showToast('Failed to send message. Please contact us via WhatsApp: +91 9944328471', 'error');
+          const errorDetail = (error && error.text) ? ` (${error.text})` : '';
+          const errorText = `Failed to send message${errorDetail}. Please check your information or try again later.`;
+          showToast(errorText, 'error');
+          statusDiv.textContent = errorText;
+          statusDiv.style.backgroundColor = '#fde8e8';
+          statusDiv.style.color = '#c62222';
+          statusDiv.style.border = '1px solid #f8b4b4';
+          statusDiv.style.display = 'block';
         })
         .finally(() => {
           submitBtn.disabled = false;
@@ -409,13 +450,17 @@
 
         const pageTitle = document.title || 'Website Contact Form';
         const templateParams = {
-          form_source: pageTitle.includes('Stores') ? 'Our Stores Page' : 'Home Page Contact Form',
+          name: name,
+          email: email,
+          phone: phone,
+          message: message || 'No extra message provided.',
+          location: location,
+          service_type: service,
           from_name: name,
           from_phone: phone,
           from_email: email,
-          location: location,
-          service_type: service,
-          message: message || 'No extra message provided.'
+          reply_to: email,
+          form_source: pageTitle.includes('Stores') ? 'Our Stores Page' : 'Home Page Contact Form'
         };
 
         sendEnquiry(templateParams, submitBtn, contactForm, `Thank you ${name}! Your request has been received. Our team will contact you shortly.`);
@@ -430,7 +475,7 @@
         const submitBtn = sigpForm.querySelector('button[type="submit"]');
         const name = (document.getElementById('sigpFullName')?.value || '').trim();
         const phone = (document.getElementById('sigpPhone')?.value || '').trim();
-        const email = (document.getElementById('sigpEmail')?.value || '').trim() || 'Not provided';
+        const email = (document.getElementById('sigpEmail')?.value || '').trim();
         const location = (document.getElementById('sigpLocation')?.value || '').trim();
         const categorySelect = document.getElementById('sigpCategory');
         const category = categorySelect?.options[categorySelect.selectedIndex]?.text || categorySelect?.value || 'SIGP Applicant';
@@ -441,14 +486,25 @@
           return;
         }
 
+        if (email && !isValidEmail(email)) {
+          showToast('Please enter a valid email address (e.g. name@example.com).', 'error');
+          const emailInput = document.getElementById('sigpEmail');
+          if (emailInput) emailInput.focus();
+          return;
+        }
+
         const templateParams = {
-          form_source: 'SIGP Program Application',
-          from_name: name,
-          from_phone: phone,
-          from_email: email,
+          name: name,
+          email: email || 'Not provided',
+          phone: phone,
+          message: message || 'No extra mentorship details provided.',
           location: location,
           service_type: `SIGP - ${category}`,
-          message: message || 'No extra mentorship details provided.'
+          from_name: name,
+          from_phone: phone,
+          from_email: email || 'Not provided',
+          reply_to: email || '',
+          form_source: 'SIGP Program Application'
         };
 
         sendEnquiry(templateParams, submitBtn, sigpForm, `Thank you ${name}! Your SIGP enquiry has been received. Our mentorship team will contact you shortly.`);
@@ -474,14 +530,25 @@
           return;
         }
 
+        if (!isValidEmail(email)) {
+          showToast('Please enter a valid email address (e.g. name@example.com).', 'error');
+          const emailInput = document.getElementById('bppEmail');
+          if (emailInput) emailInput.focus();
+          return;
+        }
+
         const templateParams = {
-          form_source: 'Business Partner Program (BPP)',
+          name: name,
+          email: email,
+          phone: phone,
+          message: message || 'No extra questions provided.',
+          location: location,
+          service_type: enquiryType,
           from_name: name,
           from_phone: phone,
           from_email: email,
-          location: location,
-          service_type: enquiryType,
-          message: message || 'No extra questions provided.'
+          reply_to: email,
+          form_source: 'Business Partner Program (BPP)'
         };
 
         sendEnquiry(templateParams, submitBtn, bppForm, `Thank you ${name}! Our BPP team will contact you regarding your partnership enquiry shortly.`);
